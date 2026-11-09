@@ -6,12 +6,12 @@ const pool = require("./db");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const complaintsRoutes = require("./routes/complaints");
+const reportsRoutes = require("./routes/reports");
 
 app.use(cors());
 app.use(express.json());
 
-app.use("/api/complaints", complaintsRoutes);
+app.use("/api/reports", reportsRoutes);
 
 app.get("/", (req, res) => {
   res.json({
