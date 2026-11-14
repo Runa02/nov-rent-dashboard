@@ -1,16 +1,181 @@
-import { Eye, EyeOff, FileCheck2, LockKeyhole, MessageSquareText, ShieldCheck, UserPlus, UsersRound } from 'lucide-react';
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import Icon from '../components/Icon.jsx';
+import {
+  ArrowUpRight,
+  BarChart3,
+  CalendarDays,
+  CarFront,
+  Eye,
+  EyeOff,
+  Gauge,
+  LockKeyhole,
+  ShieldCheck,
+  TrendingUp,
+  UsersRound,
+} from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+function Brand() {
+  return (
+    <div className="login-brand">
+      <span className="login-brand-mark" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </span>
+      <span>Nov Rent</span>
+    </div>
+  );
+}
+
+function RentalDashboardPreview() {
+  return (
+    <div className="login-preview rental-preview" aria-hidden="true">
+      <div className="preview-topbar">
+        <span className="preview-dot" />
+        <b>Nov Rent Dashboard</b>
+        <small>•••</small>
+      </div>
+      <div className="preview-stats">
+        <div className="preview-stat primary">
+          <small>Total Pendapatan</small>
+          <strong>Rp 48,6 jt</strong>
+          <span><TrendingUp size={9} /> 18,4% bulan ini</span>
+        </div>
+        <div className="preview-stat">
+          <small>Unit Tersedia</small>
+          <strong>24 / 32</strong>
+          <span>8 sedang disewa</span>
+        </div>
+      </div>
+      <div className="preview-chart rental-chart">
+        <div className="preview-chart-head"><b>Performa Rental</b><small>30 Hari ▾</small></div>
+        <div className="chart-lines"><i /><i /><i /></div>
+        <svg viewBox="0 0 420 100" preserveAspectRatio="none">
+          <path d="M0 78 C35 70 52 76 78 57 S124 65 151 42 S193 58 221 35 S263 43 287 29 S326 43 351 19 S394 30 420 9" />
+        </svg>
+      </div>
+      <div className="rental-bookings">
+        <div className="rental-booking-head"><b>Booking Terbaru</b><small>Lihat semua</small></div>
+        <div className="rental-booking"><span className="car-thumb"><CarFront size={15} /></span><p><b>Toyota Avanza 1.5 G</b><small>BR-2048 · Budi Santoso</small></p><strong>Aktif</strong></div>
+        <div className="rental-booking"><span className="car-thumb blue"><CarFront size={15} /></span><p><b>Mitsubishi Xpander</b><small>BR-2047 · Siti Aminah</small></p><strong className="ready">Siap</strong></div>
+      </div>
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [role, setRole] = useState('warga');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
-  const [form, setForm] = useState({ identity: '', password: '' });
-  const [error, setError] = useState('');
-  const update = (key) => (event) => setForm({ ...form, [key]: event.target.value });
-  const submit = (event) => { event.preventDefault(); if (!form.identity || !form.password) { setError('Nomor identitas dan kata sandi wajib diisi.'); return; } setError(''); navigate('/dashboard'); };
-  return <main className="login-page"><section className="login-intro"><div className="login-status"><span /> Sistem Informasi Desa Mandiri • Sukamaju</div><h1>Masuk ke Portal<br /><em>SuaraDesa</em></h1><p>Sampaikan aspirasi dan pantau tindak lanjut laporan pembangunan di Desa Sukamaju dengan transparan, akuntabel, dan aman.</p><div className="verified-box"><span><Icon icon={FileCheck2} size={21} /></span><div><b>Data Kependudukan Terverifikasi</b><small>Setiap pengaduan ditindaklanjuti oleh RT/RW dan Badan Permusyawaratan Desa.</small></div></div><div className="security-label">JAMINAN STANDAR KEAMANAN & INTEGRASI</div><div className="security-pills"><span><ShieldCheck size={13} /> SIAK Dukcapil</span><span><LockKeyhole size={13} /> Enkripsi 256-Bit</span><span><ShieldCheck size={13} /> Pemdes Resmi</span></div><div className="registered-card"><div className="circles"><i>W1</i><i>W2</i><i>W3</i></div><p><b>1.482+ Warga Aktif Terdaftar</b><small>Tingkat resolusi pengaduan RT/RW 94.8% tahun ini</small></p></div></section><section className="login-card"><div className="role-switch"><button className={role === 'warga' ? 'active' : ''} onClick={() => setRole('warga')}><UsersRound size={14} /> Warga Desa</button><button className={role === 'petugas' ? 'active' : ''} onClick={() => setRole('petugas')}><ShieldCheck size={14} /> Aparatur / Petugas</button></div><div className="login-heading"><h2>Masuk ke Akun {role === 'warga' ? 'Warga' : 'Petugas'}</h2><p>Gunakan NIK terdaftar, email, atau nomor WhatsApp yang aktif.</p></div><form onSubmit={submit}><label className="login-field"><b>Nomor Induk Kependudukan (NIK) / Email / No. WhatsApp</b><span><UsersRound size={15} /><input value={form.identity} onChange={update('identity')} placeholder="Contoh: 330208xxxx0002 atau no. WhatsApp" /></span><small>Pastikan nomor sesuai dokumen Kartu Tanda Penduduk (e-KTP).</small></label><label className="login-field"><b>Kata Sandi / PIN Warga</b><span><LockKeyhole size={15} /><input type={showPassword ? 'text' : 'password'} value={form.password} onChange={update('password')} placeholder="Masukkan 6 digit PIN atau kata sandi" /><button type="button" onClick={() => setShowPassword(!showPassword)} aria-label="Tampilkan kata sandi">{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></span></label><div className="login-options"><label><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Ingat saya di perangkat ini</label><a href="#forgot">Lupa Kata Sandi?</a></div>{error && <p className="login-error">{error}</p>}<button className="button button-dark login-submit" type="submit">Masuk Sekarang <span>→</span></button><button className="button otp-button" type="button" onClick={() => alert('Kode OTP akan dikirim ke WhatsApp terdaftar.')}><MessageSquareText size={15} /> Masuk Cepat via WhatsApp OTP</button></form><div className="login-divider"><span>atau belum memiliki akun warga?</span></div><button className="button register-button" type="button" onClick={() => alert('Halaman pendaftaran warga akan segera tersedia.')}><UserPlus size={15} /> Daftar Akun Warga Baru</button><div className="login-help"><MessageSquareText size={14} /> Mengalami kendala saat masuk? Hubungi <b>Posko Bantuan Layanan Digital Balai Desa Sukamaju</b> via WhatsApp <b>0812–3456–7890</b>.</div></section></main>;
+  const [form, setForm] = useState({ identity: "", password: "" });
+  const [error, setError] = useState("");
+  const update = (key) => (event) =>
+    setForm({ ...form, [key]: event.target.value });
+  const submit = (event) => {
+    event.preventDefault();
+    if (!form.identity || !form.password) {
+      setError("Email/NIK dan kata sandi wajib diisi.");
+      return;
+    }
+    setError("");
+    navigate("/dashboard");
+  };
+
+  return (
+    <main className="login-page login-page-modern">
+      <section className="login-layout">
+        <div className="login-form-panel">
+          <Brand />
+          <div className="login-form-content">
+            <div className="login-heading">
+              <h1>Selamat Datang Kembali</h1>
+              <p>
+                Masukkan email/NIK dan kata sandi untuk mengakses akun Anda.
+              </p>
+            </div>
+            <form onSubmit={submit}>
+              <label className="login-field">
+                <b>Email / NIK</b>
+                <span>
+                  <UsersRound size={15} />
+                  <input
+                    value={form.identity}
+                    onChange={update("identity")}
+                    placeholder="Masukkan email atau NIK Anda"
+                  />
+                </span>
+              </label>
+              <label className="login-field">
+                <b>Kata Sandi</b>
+                <span>
+                  <LockKeyhole size={15} />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={update("password")}
+                    placeholder="Masukkan kata sandi"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label="Tampilkan kata sandi"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </span>
+              </label>
+              <div className="login-options">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                  />{" "}
+                  Ingat saya
+                </label>
+                <a href="#forgot">Lupa kata sandi?</a>
+              </div>
+              {error && <p className="login-error">{error}</p>}
+              <button className="button button-dark login-submit" type="submit">
+                Masuk ke Akun <ArrowUpRight size={16} />
+              </button>
+              <div className="login-divider">
+                <span>atau masuk dengan</span>
+              </div>
+            </form>
+            <p className="login-register">
+              Belum punya akun?{" "}
+              <button
+                type="button"
+                onClick={() =>
+                  alert("Halaman pendaftaran warga akan segera tersedia.")
+                }
+              >
+                Daftar sekarang
+              </button>
+            </p>
+          </div>
+          <div className="login-footer">
+            <span>© 2025 Pemerintah Desa Sukamaju</span>
+            <a href="#privacy">Kebijakan Privasi</a>
+          </div>
+        </div>
+        <aside className="login-visual-panel rental-visual-panel">
+          <div className="visual-pattern pattern-one" />
+          <div className="visual-pattern pattern-two" />
+          <div className="visual-copy">
+            <div className="visual-eyebrow"><Gauge size={14} /> RENTAL MANAGEMENT SYSTEM</div>
+            <h2>Kelola bisnis rental mobil dengan lebih <em>mudah.</em></h2>
+            <p>Pantau armada, booking pelanggan, dan performa pendapatan dalam satu dashboard yang praktis.</p>
+          </div>
+          <RentalDashboardPreview />
+          <div className="rental-metrics">
+            <span><CarFront size={14} /><b>32</b><small>Total Unit</small></span>
+            <span><CalendarDays size={14} /><b>126</b><small>Booking Aktif</small></span>
+            <span><ShieldCheck size={14} /><b>98%</b><small>Kepuasan</small></span>
+          </div>
+        </aside>
+      </section>
+    </main>
+  );
 }
