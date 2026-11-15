@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   Building2,
+  CarFront,
   ClipboardCheck,
   CheckCircle2,
   ChevronDown,
@@ -19,7 +20,7 @@ import { useState } from "react";
 
 const menu = [
   ["Ringkasan", LayoutDashboard, "/admin/dashboard"],
-  ["Pengaduan Masalah", AlertCircle, "/admin/reports"],
+  ["Manajemen Armada", CarFront, "/admin/cars"],
   ["Aspirasi & Usulan Warga", MessageSquare, "/admin/aspirasi"],
   ["Manajemen Pengguna", Users, "/admin/pengguna"],
   ["Petugas & Disposisi", ClipboardCheck, "/admin/petugas"],
@@ -89,7 +90,9 @@ export default function AdminSidebar({ open, setOpen }) {
         })}
 
         <div className="admin-config-label">KONFIGURASI SISTEM</div>
-        <div className={`admin-master-data ${masterDataMenu.some(([, , path]) => location.pathname === path || location.pathname.startsWith(`${path}/`)) ? "active" : ""}`}>
+        <div
+          className={`admin-master-data ${masterDataMenu.some(([, , path]) => location.pathname === path || location.pathname.startsWith(`${path}/`)) ? "active" : ""}`}
+        >
           <button
             type="button"
             className="admin-master-toggle"
@@ -97,13 +100,27 @@ export default function AdminSidebar({ open, setOpen }) {
           >
             <FolderTree size={15} />
             <span>Master Data</span>
-            <ChevronDown className={masterDataOpen ? "rotated" : ""} size={14} />
+            <ChevronDown
+              className={masterDataOpen ? "rotated" : ""}
+              size={14}
+            />
           </button>
           {masterDataOpen && (
             <div className="admin-master-submenu">
               {masterDataMenu.map(([label, MenuIcon, path]) => {
-                const isActive = location.pathname === path || location.pathname.startsWith(path + "/");
-                return <button key={path} className={isActive ? "active" : ""} onClick={() => handleNavigate(path)}><MenuIcon size={13} /><span>{label}</span></button>;
+                const isActive =
+                  location.pathname === path ||
+                  location.pathname.startsWith(path + "/");
+                return (
+                  <button
+                    key={path}
+                    className={isActive ? "active" : ""}
+                    onClick={() => handleNavigate(path)}
+                  >
+                    <MenuIcon size={13} />
+                    <span>{label}</span>
+                  </button>
+                );
               })}
             </div>
           )}

@@ -3,13 +3,9 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import App from "./App.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage.jsx";
-import AdminReportPage from "./pages/admin/reports/Index.jsx";
-import AdminAspirationPage from "./pages/admin/aspiration/Index.jsx";
-import AdminUserPage from "./pages/admin/user/Index.jsx";
-import AdminOfficersPage from "./pages/admin/officers/Index.jsx";
-import AdminCategoriesPage from "./pages/admin/categories/Index.jsx";
-import AdminReportsSummaryPage from "./pages/admin/reports-summary/Index.jsx";
-import AdminAreasPage from "./pages/admin/areas/Index.jsx";
+import FleetManagementPage from "./pages/admin/cars/Index.jsx";
+import FleetFormPage from "./pages/admin/cars/form.jsx";
+import "./index.css";
 import "./styles.css";
 
 createRoot(document.getElementById("root")).render(
@@ -17,13 +13,9 @@ createRoot(document.getElementById("root")).render(
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-      <Route path="/admin/reports" element={<AdminReportPage />} />
-      <Route path="/admin/aspirasi" element={<AdminAspirationPage />} />
-      <Route path="/admin/pengguna" element={<AdminUserPage />} />
-      <Route path="/admin/petugas" element={<AdminOfficersPage />} />
-      <Route path="/admin/kategori" element={<AdminCategoriesPage />} />
-      <Route path="/admin/laporan" element={<AdminReportsSummaryPage />} />
-      <Route path="/admin/wilayah" element={<AdminAreasPage />} />
+      <Route path="/admin/cars" element={<FleetManagementPage />} />
+      <Route path="/admin/cars/create" element={<FleetFormPage />} />
+      <Route path="/admin/cars/:id/edit" element={<FleetFormPage />} />
       <Route path="*" element={<App />} />
     </Routes>
   </BrowserRouter>,
