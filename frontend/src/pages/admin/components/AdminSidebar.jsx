@@ -15,6 +15,7 @@ import {
   Settings,
   Users,
   X,
+  Car,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
@@ -59,11 +60,11 @@ export default function AdminSidebar({ open, setOpen }) {
     <aside className={`admin-sidebar ${open ? "open" : ""}`}>
       <div className="admin-brand">
         <span>
-          <Building2 size={20} />
+          <Car size={20} />
         </span>
         <div>
-          <b>SuaraDesa</b>
-          <small>Portal Desa Sukamaju</small>
+          <b>NovRent</b>
+          <small>Rental Mobil Admin Dashboard</small>
         </div>
         <button onClick={() => setOpen(false)} aria-label="Tutup menu">
           <X size={18} />
@@ -86,7 +87,7 @@ export default function AdminSidebar({ open, setOpen }) {
             >
               <MenuIcon size={15} />
               <span>{label}</span>
-              {index === 1 && <em>14</em>}
+              {index === 1}
             </button>
           );
         })}

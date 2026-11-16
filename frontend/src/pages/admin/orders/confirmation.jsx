@@ -25,6 +25,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { db } from "../../../config/firebase.js";
 import AdminSidebar from "../components/AdminSidebar.jsx";
 import AdminTopbar from "../components/AdminTopbar.jsx";
+import DatabaseLoading, { useMinimumLoading } from "../components/DatabaseLoading.jsx";
 
 const rupiah = (value) =>
   new Intl.NumberFormat("id-ID", {
@@ -221,6 +222,7 @@ export default function OrderConfirmationPage() {
   const [file, setFile] = useState(null);
   const [confirmed, setConfirmed] = useState(false);
   const [activeStep, setActiveStep] = useState(1);
+  const showLoading = useMinimumLoading(loading);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -296,12 +298,8 @@ export default function OrderConfirmationPage() {
     if (saved) setConfirmed(true);
   };
 
-  if (loading) {
-    return (
-      <div className="grid min-h-screen place-items-center bg-[#f7f8fe] text-sm text-slate-500">
-        Memuat detail pesanan...
-      </div>
-    );
+  if (showLoading) {
+    return <DatabaseLoading message="Memuat detail pesanan..." />;
   }
 
   if (!booking || !userProfile) {

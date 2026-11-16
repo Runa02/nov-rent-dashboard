@@ -13,6 +13,7 @@ import { db } from "../../../config/firebase.js";
 import { uploadImage } from "../../../config/cloudinary.js";
 import AdminSidebar from "../components/AdminSidebar.jsx";
 import AdminTopbar from "../components/AdminTopbar.jsx";
+import DatabaseLoading, { useMinimumLoading } from "../components/DatabaseLoading.jsx";
 
 const emptyForm = {
   photo: null,
@@ -68,6 +69,8 @@ export default function FleetFormPage() {
   const [preview, setPreview] = useState(null);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [loadingData, setLoadingData] = useState(isEdit);
+  const showLoading = useMinimumLoading(loadingData);
   const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
@@ -76,6 +79,7 @@ export default function FleetFormPage() {
 
     getDoc(doc(db, "cars", id))
       .then((snapshot) => {
+        setLoadingData(false);
         if (!snapshot.exists()) return;
         const data = snapshot.data();
         setForm((current) => ({
@@ -101,6 +105,7 @@ export default function FleetFormPage() {
       })
       .catch((error) => {
         console.error("Gagal memuat armada:", error);
+        setLoadingData(false);
         setSubmitError("Data armada gagal dimuat.");
       });
   }, [isEdit]);
@@ -203,6 +208,7 @@ export default function FleetFormPage() {
 
   return (
     <div className="admin-page fleet-page fleet-form-page">
+      {showLoading && <DatabaseLoading message="Memuat data armada..." />}
       <AdminSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       <div className="admin-content">
         <AdminTopbar setOpen={setSidebarOpen} />

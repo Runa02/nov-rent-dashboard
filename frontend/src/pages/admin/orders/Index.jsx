@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { db } from "../../../config/firebase.js";
 import AdminSidebar from "../components/AdminSidebar.jsx";
 import AdminTopbar from "../components/AdminTopbar.jsx";
+import DatabaseLoading, { useMinimumLoading } from "../components/DatabaseLoading.jsx";
 
 const tone = {
   "Menunggu Pembayaran": "text-indigo-700 bg-indigo-100",
@@ -31,6 +32,13 @@ const money = (value) =>
     currency: "IDR",
     maximumFractionDigits: 0,
   }).format(value);
+
+const displayLabel = (value) =>
+  String(value || "-")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 const asDateText = (value) => {
   if (!value) return "-";
@@ -89,10 +97,10 @@ function normalizeOrder(snapshot) {
 function PaymentBadge({ status }) {
   return (
     <span
-      className={`inline-flex max-w-[90px] items-center gap-1 rounded-full px-1.5 py-1 font-bold leading-tight ${tone[status]}`}
+      className={`inline-flex max-w-[120px] items-center gap-1 rounded-full px-1.5 py-1 font-bold leading-tight ${tone[status] || "text-slate-700 bg-slate-100"}`}
     >
       <i className="h-1 w-1 shrink-0 rounded-full bg-current" />
-      {status}
+      {displayLabel(status)}
     </span>
   );
 }
@@ -108,6 +116,7 @@ export default function OrderManagementPage() {
   const [status, setStatus] = useState("Semua Status Sewa");
   const [service, setService] = useState("Metode Pembayaran");
   const [page, setPage] = useState(1);
+  const showLoading = useMinimumLoading(loading);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -177,6 +186,7 @@ export default function OrderManagementPage() {
 
   return (
     <div className="admin-page bg-[#f7f8fe] text-slate-700">
+      {showLoading && <DatabaseLoading message="Memuat data pesanan..." />}
       <AdminSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       <div className="admin-content">
         <AdminTopbar setOpen={setSidebarOpen} />
@@ -195,8 +205,8 @@ export default function OrderManagementPage() {
               </p>
             </div>
           </div>
-          <section className="mx-auto mb-3 grid grid-cols-1 gap-1.5 rounded-lg border border-slate-100 bg-white p-2 md:grid-cols-2 xl:grid-cols-[1.7fr_.7fr_.7fr_.7fr]">
-            <label className={`${inputClass} flex items-center gap-1`}>
+          <section className="mx-auto mb-3 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-100 bg-white p-2 xl:flex-nowrap">
+            <label className={`${inputClass} flex min-w-[220px] flex-[1.7] items-center gap-1`}>
               <Search size={14} className="text-slate-400" />
               <input
                 className="w-full bg-transparent outline-none"
@@ -238,7 +248,7 @@ export default function OrderManagementPage() {
                 ],
               ],
             ].map(([value, setter, options]) => (
-              <label key={value} className="relative">
+              <label key={value} className="relative min-w-[140px] flex-1">
                 <select
                   className={`${inputClass} w-full appearance-none pr-6`}
                   value={value}
@@ -254,7 +264,7 @@ export default function OrderManagementPage() {
                 />
               </label>
             ))}
-            <div className="flex gap-1 md:col-span-2 xl:col-span-4">
+            <div className="flex shrink-0 gap-1">
               <button
                 className={`${inputClass} inline-flex items-center gap-1 px-2`}
               >
@@ -364,9 +374,9 @@ export default function OrderManagementPage() {
                         </td>
                         <td className="p-2">
                           <b className="block w-max rounded bg-indigo-50 px-1 py-1 font-bold text-indigo-700">
-                            {order[10]}
+                            {displayLabel(order[10])}
                           </b>
-                          <small className={muted}>{order[11]}</small>
+                          <small className={muted}>{displayLabel(order[11])}</small>
                         </td>
                         <td className="p-2">
                           <div className="flex items-center gap-1.5">

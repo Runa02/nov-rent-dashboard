@@ -22,6 +22,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../../../config/firebase.js";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
+import DatabaseLoading, { useMinimumLoading } from "../components/DatabaseLoading.jsx";
 import AdminSidebar from "../components/AdminSidebar.jsx";
 import AdminTopbar from "../components/AdminTopbar.jsx";
 
@@ -60,6 +61,7 @@ export default function FleetManagementPage() {
   const [selected, setSelected] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const showLoading = useMinimumLoading(loading);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -147,6 +149,7 @@ export default function FleetManagementPage() {
 
   return (
     <div className="admin-page fleet-page">
+      {showLoading && <DatabaseLoading message="Memuat data armada..." />}
       <AdminSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       <div className="admin-content">
         <AdminTopbar setOpen={setSidebarOpen} />
