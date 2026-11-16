@@ -257,9 +257,6 @@ export default function OrderConfirmationPage() {
   const userProfile = booking
     ? normalizeUserProfile(booking.raw, booking)
     : null;
-  const missingDocuments =
-    userProfile?.documents.filter((document) => document.status !== "Tersedia") ||
-    [];
 
   const updateOrderStatus = async (updates) => {
     if (!id) return;
@@ -585,18 +582,6 @@ export default function OrderConfirmationPage() {
                 </div>
               </Card>
               <Card title="Data Pengguna" icon={BadgeCheck}>
-                {missingDocuments.length > 0 && (
-                  <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800">
-                    <CircleAlert size={15} className="mt-0.5 shrink-0" />
-                    <div>
-                      <b className="block">Data pengguna belum lengkap</b>
-                      <span>
-                        Dokumen yang belum tersedia: {missingDocuments.map((document) => document.label).join(", ")}.
-                        Lengkapi dokumen sebelum melanjutkan verifikasi.
-                      </span>
-                    </div>
-                  </div>
-                )}
                 <div className="grid gap-2 sm:grid-cols-2">
                   {[
                     ["Nama", userProfile.name],

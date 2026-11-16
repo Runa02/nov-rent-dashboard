@@ -6,7 +6,7 @@ import AdminDashboardPage from "./pages/admin/AdminDashboardPage.jsx";
 import FleetManagementPage from "./pages/admin/cars/Index.jsx";
 import FleetFormPage from "./pages/admin/cars/form.jsx";
 import OrderManagementPage from "./pages/admin/orders/Index.jsx";
-import OrderConfirmationPage from "./pages/admin/orders/Confirmation.jsx";
+import OrderConfirmationPage from "./pages/admin/orders/confirmation.jsx";
 import "./index.css";
 import "./styles.css";
 
@@ -19,7 +19,10 @@ createRoot(document.getElementById("root")).render(
       <Route path="/admin/cars/create" element={<FleetFormPage />} />
       <Route path="/admin/cars/:id/edit" element={<FleetFormPage />} />
       <Route path="/admin/orders" element={<OrderManagementPage />} />
-      <Route path="/admin/orders/:id/confirm" element={<OrderConfirmationPage />} />
+      <Route
+        path="/admin/orders/:id/confirm"
+        element={<OrderConfirmationPage />}
+      />
       <Route path="*" element={<App />} />
     </Routes>
   </BrowserRouter>,
