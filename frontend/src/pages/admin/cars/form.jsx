@@ -9,8 +9,8 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { db, storage } from "../../../config/firebase.js";
+import { db } from "../../../config/firebase.js";
+import { uploadImage } from "../../../config/cloudinary.js";
 import AdminSidebar from "../components/AdminSidebar.jsx";
 import AdminTopbar from "../components/AdminTopbar.jsx";
 
@@ -113,7 +113,13 @@ export default function FleetFormPage() {
   const choosePhoto = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setSubmitError("Ukuran foto maksimal 5 MB.");
+      event.target.value = "";
+      return;
+    }
     setForm((current) => ({ ...current, photo: file }));
+    setSubmitError("");
     setPreview(URL.createObjectURL(file));
   };
 
@@ -143,10 +149,15 @@ export default function FleetFormPage() {
     setSubmitError("");
     try {
       let imageUrl = preview && !preview.startsWith("blob:") ? preview : "";
+      let imageWarning = "";
       if (form.photo) {
-        const imageRef = ref(storage, `cars/${Date.now()}-${form.photo.name}`);
-        await uploadBytes(imageRef, form.photo);
-        imageUrl = await getDownloadURL(imageRef);
+        try {
+          imageUrl = await uploadImage(form.photo, "cars");
+        } catch (error) {
+          console.error("Foto armada gagal diupload ke Cloudinary:", error);
+          imageWarning = `Foto gagal diupload ke Cloudinary: ${error.message}. Data armada tetap disimpan.`;
+          imageUrl = "";
+        }
       }
       const payload = {
         brand: form.brand.trim(),
@@ -178,11 +189,12 @@ export default function FleetFormPage() {
           createdAt: serverTimestamp(),
         });
       }
+      if (imageWarning) window.alert(imageWarning);
       navigate("/admin/cars");
     } catch (error) {
       console.error("Gagal menyimpan armada:", error);
       setSubmitError(
-        "Armada gagal disimpan. Periksa permission Firebase dan coba lagi.",
+        `Armada gagal disimpan (${error.code || "error"}). Periksa permission Firestore dan coba lagi.`,
       );
     } finally {
       setSaving(false);
@@ -195,12 +207,6 @@ export default function FleetFormPage() {
       <div className="admin-content">
         <AdminTopbar setOpen={setSidebarOpen} />
         <main className="fleet-main">
-          <button
-            className="fleet-back-button"
-            onClick={() => navigate("/admin/cars")}
-          >
-            <ArrowLeft size={15} /> Kembali ke Manajemen Armada
-          </button>
           <div className="fleet-form-heading">
             <div>
               <p className="fleet-eyebrow">OPERASIONAL RENTAL</p>

@@ -2,6 +2,7 @@ import {
   AlertCircle,
   Building2,
   CarFront,
+  ClipboardList,
   ClipboardCheck,
   CheckCircle2,
   ChevronDown,
@@ -21,6 +22,7 @@ import { useState } from "react";
 const menu = [
   ["Ringkasan", LayoutDashboard, "/admin/dashboard"],
   ["Manajemen Armada", CarFront, "/admin/cars"],
+  ["Manajemen Pesanan", ClipboardList, "/admin/orders"],
   ["Aspirasi & Usulan Warga", MessageSquare, "/admin/aspirasi"],
   ["Manajemen Pengguna", Users, "/admin/pengguna"],
   ["Petugas & Disposisi", ClipboardCheck, "/admin/petugas"],
