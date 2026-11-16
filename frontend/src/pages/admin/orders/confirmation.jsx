@@ -15,17 +15,22 @@ import {
   X,
 } from "lucide-react";
 import {
+  collection,
   doc,
   onSnapshot,
+  query,
   serverTimestamp,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { db } from "../../../config/firebase.js";
 import AdminSidebar from "../components/AdminSidebar.jsx";
 import AdminTopbar from "../components/AdminTopbar.jsx";
-import DatabaseLoading, { useMinimumLoading } from "../components/DatabaseLoading.jsx";
+import DatabaseLoading, {
+  useMinimumLoading,
+} from "../components/DatabaseLoading.jsx";
 
 const rupiah = (value) =>
   new Intl.NumberFormat("id-ID", {
@@ -68,7 +73,25 @@ function normalizeBooking(id, data) {
     data.name ||
     "Pelanggan";
   const total = Number(
-    data.totalAmount ?? data.totalPrice ?? data.amount ?? data.price ?? 0,
+    data.grandTotal ??
+      data.totalAmount ??
+      data.totalPrice ??
+      data.amount ??
+      data.price ??
+      0,
+  );
+  const insuranceAmount = Number(
+    data.insuranceFee ?? data.insuranceAmount ?? data.insurance ?? 0,
+  );
+  const driverFee = Number(data.driverFee ?? data.driverPrice ?? 0);
+  const deliveryFee = Number(data.deliveryFee ?? data.deliveryPrice ?? 0);
+  const baseAmount = Number(
+    data.rentalFee ??
+      data.rentalAmount ??
+      data.rentalTotal ??
+      data.subtotal ??
+      data.baseAmount ??
+      Math.max(total - insuranceAmount - driverFee - deliveryFee, 0),
   );
 
   return {
@@ -118,12 +141,10 @@ function normalizeBooking(id, data) {
     serviceNote:
       data.serviceNote || data.deliveryMethod || data.pickupLocation || "-",
     vehicleYear: data.vehicleYear || vehicle.year || "-",
-    baseAmount: Number(
-      data.rentalAmount ?? data.baseAmount ?? data.subtotal ?? total,
-    ),
-    insuranceAmount: Number(data.insuranceAmount ?? data.insurance ?? 0),
-    driverFee: Number(data.driverFee ?? data.driverPrice ?? 0),
-    deliveryFee: Number(data.deliveryFee ?? data.deliveryPrice ?? 0),
+    baseAmount,
+    insuranceAmount,
+    driverFee,
+    deliveryFee,
     created: dateText(data.createdAt || data.createdDate || data.orderDate),
     uploaded: dateText(
       data.paymentUploadedAt || data.proofUploadedAt || data.updatedAt,
@@ -217,21 +238,24 @@ export default function OrderConfirmationPage() {
   const [booking, setBooking] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [paymentLoading, setPaymentLoading] = useState(true);
+  const [paymentData, setPaymentData] = useState(null);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [file, setFile] = useState(null);
   const [confirmed, setConfirmed] = useState(false);
   const [activeStep, setActiveStep] = useState(1);
-  const showLoading = useMinimumLoading(loading);
+  const showLoading = useMinimumLoading(loading || paymentLoading);
   const fileRef = useRef(null);
 
   useEffect(() => {
     if (!id) {
       setLoadError("ID pesanan tidak ditemukan.");
       setLoading(false);
+      setPaymentLoading(false);
       return undefined;
     }
-    const unsubscribe = onSnapshot(
+    const unsubscribeOrder = onSnapshot(
       doc(db, "orders", id),
       (snapshot) => {
         if (!snapshot.exists()) {
@@ -253,12 +277,49 @@ export default function OrderConfirmationPage() {
         setLoading(false);
       },
     );
-    return unsubscribe;
+    const paymentQuery = query(
+      collection(db, "payments"),
+      where("orderId", "==", id),
+    );
+    const unsubscribePayment = onSnapshot(
+      paymentQuery,
+      (snapshot) => {
+        setPaymentData(snapshot.docs[0]?.data() || null);
+        setPaymentLoading(false);
+      },
+      (error) => {
+        console.error("Gagal memuat bukti pembayaran:", error);
+        setPaymentData(null);
+        setPaymentLoading(false);
+      },
+    );
+    return () => {
+      unsubscribeOrder();
+      unsubscribePayment();
+    };
   }, [id]);
 
   const userProfile = booking
     ? normalizeUserProfile(booking.raw, booking)
     : null;
+  const paymentAmount = Number(paymentData?.amount ?? booking?.total ?? 0);
+  const invoiceAmount = Number(booking?.total || paymentAmount);
+  const paymentBank = paymentData?.bankName || booking?.bank || "-";
+  const paymentAccount = paymentData?.accountNumber || booking?.account || "-";
+  const paymentSender = paymentData?.accountHolder || booking?.sender || "-";
+  const paymentReference =
+    paymentData?.referenceNumber ||
+    paymentData?.transactionId ||
+    booking?.reference ||
+    "-";
+  const paymentMethod = paymentData?.method || booking?.payment || "-";
+  const paymentProof = paymentData?.proofImageUrl || booking?.receipt || "";
+  const paymentDate = dateText(paymentData?.createdAt || booking?.transferDate);
+  const paymentStatus = String(
+    paymentData?.status || booking?.paymentStatus || "pending",
+  )
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
   const updateOrderStatus = async (updates) => {
     if (!id) return;
@@ -307,12 +368,6 @@ export default function OrderConfirmationPage() {
       <div className="grid min-h-screen place-items-center bg-[#f7f8fe] p-6 text-center text-sm text-slate-500">
         <div>
           <p>{loadError || "Detail pesanan tidak tersedia."}</p>
-          <button
-            onClick={() => navigate("/admin/orders")}
-            className="mt-3 rounded bg-indigo-600 px-3 py-2 text-white"
-          >
-            Kembali ke daftar pesanan
-          </button>
         </div>
       </div>
     );
@@ -326,12 +381,6 @@ export default function OrderConfirmationPage() {
         <main className="w-full px-4 pb-8 pt-[78px] text-[11px] leading-4 sm:px-7">
           <div className="mx-auto mb-4 flex items-center justify-between gap-3">
             <div>
-              <button
-                onClick={() => navigate("/admin/orders")}
-                className="mb-2 inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 hover:text-blue-600"
-              >
-                <ArrowLeft size={14} /> Kembali ke Daftar Pesanan
-              </button>
               <div className="flex items-center gap-2">
                 <h1 className="text-[17px] font-extrabold tracking-tight text-slate-800 sm:text-lg">
                   Konfirmasi Pembayaran
@@ -380,43 +429,57 @@ export default function OrderConfirmationPage() {
             <div className={activeStep === 1 ? "contents" : "hidden"}>
               <Card title="Bukti Pembayaran Pelanggan" icon={ImageIcon}>
                 <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                  {paymentProof && (
+                    <a
+                      href={paymentProof}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mb-3 block overflow-hidden rounded-lg border border-slate-200 bg-white"
+                    >
+                      <img
+                        src={paymentProof}
+                        alt="Bukti pembayaran pelanggan"
+                        className="max-h-[360px] w-full object-contain"
+                      />
+                    </a>
+                  )}
                   <div className="mx-auto rounded-lg border border-slate-200 bg-white p-4">
                     <div className="mb-3 flex items-center justify-between border-b pb-3">
                       <span className="font-bold text-blue-700">
-                        {booking.bank}{" "}
+                        {paymentBank}{" "}
                         <small className="text-[8px]">Transfer</small>
                       </span>
                       <span className="text-[8px] text-slate-400">
-                        {booking.transferDate}
+                        {paymentDate}
                       </span>
                     </div>
                     <div className="space-y-2 text-slate-500">
                       <div className="flex justify-between">
                         <span>Status</span>
-                        <b className="text-emerald-600">✓ BERHASIL</b>
+                        <b className="text-amber-600">{paymentStatus}</b>
                       </div>
                       <div className="flex justify-between">
                         <span>Jenis Transaksi</span>
                         <b className="text-slate-700">
-                          Transfer ke {booking.payment}
+                          Transfer ke {paymentMethod}
                         </b>
                       </div>
                       <div className="flex justify-between">
                         <span>Pengirim</span>
-                        <b className="text-slate-700">{booking.sender}</b>
+                        <b className="text-slate-700">{paymentSender}</b>
                       </div>
                       <div className="flex justify-between">
                         <span>Rekening Tujuan</span>
-                        <b className="text-slate-700">{booking.account}</b>
+                        <b className="text-slate-700">{paymentAccount}</b>
                       </div>
                       <div className="flex justify-between">
                         <span>No. Referensi</span>
-                        <b className="text-slate-700">{booking.reference}</b>
+                        <b className="text-slate-700">{paymentReference}</b>
                       </div>
                     </div>
                     <div className="mt-4 flex justify-between rounded bg-slate-100 px-3 py-2">
                       <span>Jumlah Transfer</span>
-                      <b className="text-blue-700">{rupiah(booking.total)}</b>
+                      <b className="text-blue-700">{rupiah(paymentAmount)}</b>
                     </div>
                     <div className="mt-4 flex justify-around text-lg font-bold tracking-widest text-slate-500">
                       ▌▌▌ ▌▌▌ ▌▌▌
@@ -426,17 +489,17 @@ export default function OrderConfirmationPage() {
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   <div className="rounded bg-slate-50 p-2">
                     <span className="block text-slate-400">Nama Bank</span>
-                    <b>{booking.bank}</b>
+                    <b>{paymentBank}</b>
                   </div>
                   <div className="rounded bg-slate-50 p-2">
                     <span className="block text-slate-400">Waktu Unggah</span>
-                    <b>{booking.uploaded}</b>
+                    <b>{paymentDate}</b>
                   </div>
                   <div className="rounded bg-slate-50 p-2">
                     <span className="block text-slate-400">
                       Status Verifikasi
                     </span>
-                    <b className="text-amber-600">{booking.paymentStatus}</b>
+                    <b className="text-amber-600">{paymentStatus}</b>
                   </div>
                 </div>
                 <div className="mt-3 flex gap-2">
@@ -459,7 +522,7 @@ export default function OrderConfirmationPage() {
                       METODE PEMBAYARAN
                     </span>
                     <b className="mt-1 block text-indigo-700">
-                      {booking.payment}
+                      {paymentMethod}
                     </b>
                   </div>
                   <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
@@ -467,7 +530,7 @@ export default function OrderConfirmationPage() {
                       REKENING TUJUAN PERUSAHAAN
                     </span>
                     <b className="mt-1 block text-indigo-700">
-                      {booking.account}
+                      {paymentAccount}
                     </b>
                   </div>
                   <div className="rounded-lg bg-slate-50 p-3">
@@ -475,7 +538,7 @@ export default function OrderConfirmationPage() {
                       NOMINAL TAGIHAN RESMI
                     </span>
                     <b className="mt-1 block text-slate-800">
-                      {rupiah(booking.total)}
+                      {rupiah(invoiceAmount)}
                     </b>
                   </div>
                   <div className="rounded-lg bg-emerald-50 p-3">
@@ -483,7 +546,7 @@ export default function OrderConfirmationPage() {
                       NOMINAL TRANSFER PELANGGAN
                     </span>
                     <b className="mt-1 block text-emerald-700">
-                      {rupiah(booking.total)}{" "}
+                      {rupiah(paymentAmount)}{" "}
                       <span className="ml-1 rounded bg-emerald-500 px-1 text-[7px] text-white">
                         Cocok 100%
                       </span>
@@ -495,13 +558,13 @@ export default function OrderConfirmationPage() {
                     <span className="block text-slate-400">
                       NAMA REKENING PENGIRIM
                     </span>
-                    <b>{booking.sender}</b>
+                    <b>{paymentSender}</b>
                   </div>
                   <div>
                     <span className="block text-slate-400">
                       TANGGAL / WAKTU TRANSFER
                     </span>
-                    <b>{booking.transferDate}</b>
+                    <b>{paymentDate}</b>
                   </div>
                 </div>
                 <div className="mt-4 flex gap-2 rounded-lg bg-amber-50 p-3 text-amber-800">
@@ -544,7 +607,13 @@ export default function OrderConfirmationPage() {
                   </div>
                 </div>
               </Card>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => navigate("/admin/orders")}
+                  className="inline-flex items-center gap-2 rounded-md bg-red-700 px-4 py-2.5 text-[11px] font-bold text-white hover:bg-red-800"
+                >
+                  <ArrowLeft size={14} /> Kembali
+                </button>
                 <button
                   type="button"
                   onClick={() => setActiveStep(2)}
@@ -575,7 +644,7 @@ export default function OrderConfirmationPage() {
                   </div>
                   <div className="mt-3 flex justify-between rounded bg-slate-100 p-3 font-bold">
                     <span>Total Pembayaran</span>
-                    <b className="text-blue-700">{rupiah(booking.total)}</b>
+                    <b className="text-blue-700">{rupiah(invoiceAmount)}</b>
                   </div>
                 </div>
               </Card>

@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ChevronDown,
   CircleUserRound,
+  Edit,
   Edit3,
   Eye,
   Filter,
@@ -22,7 +23,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../../../config/firebase.js";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
-import DatabaseLoading, { useMinimumLoading } from "../components/DatabaseLoading.jsx";
+import DatabaseLoading, {
+  useMinimumLoading,
+} from "../components/DatabaseLoading.jsx";
 import AdminSidebar from "../components/AdminSidebar.jsx";
 import AdminTopbar from "../components/AdminTopbar.jsx";
 
@@ -334,25 +337,23 @@ export default function FleetManagementPage() {
                           <StatusBadge status={car.status} />
                         </td>
                         <td>
-                          <div className="fleet-actions">
-                            <button aria-label={`Lihat ${car.name}`}>
-                              <Eye size={15} />
-                            </button>
+                          <div className="gap-1 flex items-center">
                             <button
                               aria-label={`Edit ${car.name}`}
                               onClick={() =>
                                 navigate(`/admin/cars/${car.id}/edit`)
                               }
+                              className="inline-flex items-center gap-1 rounded bg-indigo-100 px-2 py-2 font-bold text-indigo-700 hover:bg-indigo-200"
                             >
-                              <Edit3 size={14} />
+                              <Edit size={14} />
                             </button>
                             <button
                               aria-label={`Hapus ${car.name}`}
                               onClick={() => setDeleteTarget(car)}
+                              className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-2 font-bold text-red-700 hover:bg-red-200"
                             >
                               <Trash2 size={14} />
                             </button>
-                            <MoreVertical size={15} />
                           </div>
                         </td>
                       </tr>
@@ -384,7 +385,11 @@ export default function FleetManagementPage() {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Hapus armada?"
-        message={deleteTarget ? `Kendaraan ${deleteTarget.name} akan dihapus permanen dari database.` : ""}
+        message={
+          deleteTarget
+            ? `Kendaraan ${deleteTarget.name} akan dihapus permanen dari database.`
+            : ""
+        }
         confirmLabel="Ya, hapus armada"
         loading={deleting}
         onCancel={() => !deleting && setDeleteTarget(null)}
