@@ -25,7 +25,7 @@ const menu = [
   ["Manajemen Armada", CarFront, "/admin/cars"],
   ["Manajemen Pesanan", ClipboardList, "/admin/orders"],
   ["Aspirasi & Usulan Warga", MessageSquare, "/admin/aspirasi"],
-  ["Manajemen Pengguna", Users, "/admin/pengguna"],
+  ["Manajemen Driver", Users, "/admin/drivers"],
   ["Petugas & Disposisi", ClipboardCheck, "/admin/petugas"],
   ["Laporan & Rekap Cetak", FileBarChart, "/admin/laporan"],
 ];

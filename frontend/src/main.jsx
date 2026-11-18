@@ -7,6 +7,7 @@ import FleetManagementPage from "./pages/admin/cars/Index.jsx";
 import FleetFormPage from "./pages/admin/cars/form.jsx";
 import OrderManagementPage from "./pages/admin/orders/Index.jsx";
 import OrderConfirmationPage from "./pages/admin/orders/confirmation.jsx";
+import ManajemenDriver from "./pages/admin/drivers/Index.jsx";
 import "./index.css";
 import "./styles.css";
 
@@ -14,15 +15,25 @@ createRoot(document.getElementById("root")).render(
   <BrowserRouter>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+
       <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+
       <Route path="/admin/cars" element={<FleetManagementPage />} />
+
       <Route path="/admin/cars/create" element={<FleetFormPage />} />
+
       <Route path="/admin/cars/:id/edit" element={<FleetFormPage />} />
+
       <Route path="/admin/orders" element={<OrderManagementPage />} />
+
       <Route
         path="/admin/orders/:id/confirm"
         element={<OrderConfirmationPage />}
       />
+
+      {/* HALAMAN MANAJEMEN DRIVER (BARU) */}
+      <Route path="/admin/drivers" element={<ManajemenDriver />} />
+
       <Route path="*" element={<App />} />
     </Routes>
   </BrowserRouter>,
