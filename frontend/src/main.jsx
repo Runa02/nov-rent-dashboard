@@ -8,6 +8,8 @@ import FleetFormPage from "./pages/admin/cars/form.jsx";
 import OrderManagementPage from "./pages/admin/orders/Index.jsx";
 import OrderConfirmationPage from "./pages/admin/orders/confirmation.jsx";
 import ManajemenDriver from "./pages/admin/drivers/Index.jsx";
+import DriverLayout from "./pages/admin/drivers/DriverLayout.jsx";
+import DriverForm from "./pages/admin/drivers/DriverForm.jsx";
 import "./index.css";
 import "./styles.css";
 
@@ -31,8 +33,10 @@ createRoot(document.getElementById("root")).render(
         element={<OrderConfirmationPage />}
       />
 
-      {/* HALAMAN MANAJEMEN DRIVER (BARU) */}
-      <Route path="/admin/drivers" element={<ManajemenDriver />} />
+      <Route path="/admin/drivers" element={<DriverLayout />}>
+        <Route index element={<ManajemenDriver />} />
+        <Route path="create" element={<DriverForm />} />
+      </Route>
 
       <Route path="*" element={<App />} />
     </Routes>

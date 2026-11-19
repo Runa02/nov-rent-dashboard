@@ -1,17 +1,6 @@
 import {
-  ArrowRight,
-  CarFront,
-  CircleDot,
-  Clock3,
-  Download,
-  MapPin,
-  Navigation,
-  Phone,
-  Radio,
-  Smile,
-  TrendingUp,
-  UserRoundPlus,
-  UsersRound,
+  ArrowRight, ArrowUpRight, CarFront, Circle, Clock3, Download, MapPin,
+  Navigation, Phone, Radio, Smile, UserRound,
 } from "lucide-react";
 
 // Data contoh, belum terhubung langsung ke Firestore.
@@ -38,113 +27,114 @@ const drivers = [
   },
 ];
 
+const panel = "min-w-0 rounded-[9px] border border-slate-200 bg-white shadow-sm";
+const heading = "text-[15px] leading-tight font-bold tracking-tight";
+const blueBadge = "border-blue-100 bg-blue-50 text-blue-600";
+const greenBadge = "border-emerald-100 bg-emerald-50 text-emerald-600";
+const iconButton = "grid size-8 place-items-center rounded-full bg-blue-50 text-blue-600 disabled:cursor-not-allowed";
+
+function Metric({ label, icon: Icon, value, unit, children, positive }) {
+  return (
+    <article className={`${panel} p-[15px]`}>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[9px] font-bold tracking-wide text-slate-500">{label}</span>
+        <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-blue-600"><Icon size={16} /></span>
+      </div>
+      <p className="mt-2 flex items-baseline gap-1.5">
+        <strong className="text-[23px] leading-tight font-bold tracking-tight">{value}</strong>
+        <span className={positive ? "text-[11px] font-bold text-emerald-600" : "text-[11px] font-medium text-slate-500"}>{unit}</span>
+      </p>
+      <p className={`mt-[3px] flex items-center gap-1 text-[9px] ${positive ? "text-slate-500" : "text-emerald-600"}`}>{children}</p>
+    </article>
+  );
+}
+
+export function DriverStats() {
+  return (
+    <section>
+      <h2 className={`${heading} mb-3`}>Laporan Kinerja Minggu Ini</h2>
+      <div className="grid gap-3 @min-[270px]:grid-cols-2">
+        <Metric label="JAM KEMUDI" icon={Clock3} value="42" unit="Jam">
+          <ArrowUpRight size={14} /> +14% beban stabil
+        </Metric>
+        <Metric label="KEPUASAN TAMU" icon={Smile} value="98%" unit="Puas" positive>
+          Dari 64 ulasan tamu
+        </Metric>
+      </div>
+    </section>
+  );
+}
+
 function DriverCard({ driver }) {
   const working = driver.status === "working";
   return (
-    <article className="ndr-card">
-      <div className="ndr-card-head">
-        <div className="ndr-person">
-          <div className="ndr-avatar">
-            <UsersRound size={26} />
-            <span className={`ndr-avatar-dot ${working ? "blue" : "green"}`} />
-          </div>
-          <div className="ndr-person-text">
-            <strong>{driver.name}</strong>
-            <small>{driver.id}</small>
+    <article className={`${panel} p-[15px]`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="relative grid size-9 shrink-0 place-items-center rounded-full bg-blue-50 text-blue-600">
+            <UserRound size={19} />
+            <i className={`absolute right-0 bottom-0 size-3 rounded-full border-2 border-white ${working ? "bg-blue-600" : "bg-emerald-500"}`} />
+          </span>
+          <div>
+            <h3 className="text-[14px] leading-tight font-bold">{driver.name}</h3>
+            <p className="text-[10px] text-slate-400">{driver.id}</p>
           </div>
         </div>
-        <span className={`ndr-status ${working ? "working" : "available"}`}>
-          <i className={`ndr-dot ${working ? "blue" : "green"}`} />
-          {working ? "Sedang Bertugas" : "Siap Jalan"}
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium ${working ? blueBadge : greenBadge}`}>
+          <i className="size-2 rounded-full bg-current" /> {working ? "Sedang Bertugas" : "Siap Jalan"}
         </span>
       </div>
-
-      <div className="ndr-vehicle">
-        <div className="ndr-car-line">
-          <div className="ndr-car-name">
-            <CarFront size={19} />
-            <strong>{driver.car}</strong>
-            <span className="ndr-plate">{driver.plate}</span>
+      {working && (
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2 text-[11px]">
+            <CarFront size={17} className="text-slate-500" />
+            <strong className="font-semibold">{driver.car}</strong>
+            <span className="rounded bg-slate-200 px-2.5 py-0.5 text-slate-600">{driver.plate}</span>
+            <span className="ml-auto text-slate-500">{driver.transmission}</span>
           </div>
-          <span className="ndr-transmission">{driver.transmission}</span>
-        </div>
-        {working ? (
-          <div className="ndr-route">
-            <span className="ndr-place">
-              <CircleDot size={19} />
-              {driver.from}
+          <div className="mt-3 flex items-center gap-2 px-1 text-[11px] font-medium">
+            <span className="flex items-center gap-1.5"><Circle size={13} strokeWidth={4} className="text-slate-500" />{driver.from}</span>
+            <span className="relative h-0.5 flex-1 bg-blue-200">
+              <ArrowRight size={19} className="absolute top-1/2 right-0 -translate-y-1/2 text-blue-600" />
             </span>
-            <div className="ndr-route-track">
-              <ArrowRight size={24} />
-            </div>
-            <span className="ndr-place destination">
-              <MapPin size={19} />
-              {driver.to}
-            </span>
+            <span className="flex items-center gap-1.5 text-emerald-600"><MapPin size={16} />{driver.to}</span>
           </div>
-        ) : (
-          <div className="ndr-standby">
-            <MapPin size={19} />
-            <span>
-              Standby di: <strong>{driver.standby}</strong>
-            </span>
-          </div>
-        )}
-      </div>
-
-      <div className="ndr-card-foot">
+        </>
+      )}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-2.5 text-[11px]">
         {working ? (
           <>
-            <span className="ndr-foot-info">
-              <UsersRound size={19} />
-              <span>
-                Tamu: <strong>{driver.guest}</strong>
-              </span>
+            <span className="flex items-center gap-2 text-slate-500"><UserRound size={17} />
+              <span>Tamu: <strong className="font-semibold text-slate-800">{driver.guest}</strong></span>
             </span>
-            <div className="ndr-actions">
-              <button
-                type="button"
-                disabled
-                title="Fitur telepon belum tersedia"
-                aria-label="Telepon driver"
-              >
-                <Phone size={19} />
-              </button>
-              <button
-                type="button"
-                disabled
-                title="Fitur navigasi belum tersedia"
-                aria-label="Navigasi driver"
-              >
-                <Navigation size={19} />
-              </button>
+            <div className="flex gap-2">
+              <button type="button" disabled className={iconButton} title="Fitur telepon belum tersedia" aria-label="Telepon driver"><Phone size={16} /></button>
+              <button type="button" disabled className={iconButton} title="Fitur navigasi belum tersedia" aria-label="Navigasi driver"><Navigation size={16} /></button>
             </div>
           </>
         ) : (
-          <>
-            <span className="ndr-foot-info ready">
-              <Clock3 size={19} />
-              Tersedia untuk order
-            </span>
-            <button
-              type="button"
-              className="ndr-assign"
-              disabled
-              title="Fitur penugasan belum tersedia"
-            >
-              Tugaskan <ArrowRight size={17} />
-            </button>
-          </>
+          <span className="flex items-center gap-1.5 text-emerald-600"><Clock3 size={14} /> Tersedia untuk order</span>
         )}
       </div>
     </article>
   );
 }
 
-export default function DriverContent({
-  search = "",
-  status = "Semua Status",
-}) {
+function ScheduleRow({ initials, name, route, children, time, standby }) {
+  return (
+    <li className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1.5 p-[15px] sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+      <span className="grid size-8 place-items-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-600">{initials}</span>
+      <div className="space-y-0.5">
+        <h3 className="text-[13px] leading-4 font-bold">{name}</h3>
+        <p className="text-[11px] text-slate-500">{route}</p>
+        <p className="text-[10px] text-slate-400">{children}</p>
+      </div>
+      <span className={`col-start-2 w-fit self-center rounded-md border px-2 py-1 text-[10px] font-medium sm:col-auto ${standby ? greenBadge : blueBadge}`}>{time}</span>
+    </li>
+  );
+}
+
+export default function DriverContent({ search = "", status = "Semua Status", addedDrivers = [] }) {
   const keyword = search.toLowerCase().trim();
   const statusMap = {
     "Siap Jalan": "available",
@@ -152,7 +142,7 @@ export default function DriverContent({
     "Cuti / Istirahat": "leave",
     Nonaktif: "inactive",
   };
-  const visible = drivers.filter((driver) => {
+  const visible = [...addedDrivers, ...drivers].filter((driver) => {
     const textMatches = `${driver.name} ${driver.id}`
       .toLowerCase()
       .includes(keyword);
@@ -162,103 +152,37 @@ export default function DriverContent({
   });
 
   return (
-    <div className="ndr-page">
-      <section className="ndr-section">
-        <div className="ndr-section-head">
-          <h2>Status Pengemudi Aktif</h2>
-          <span className="ndr-live-label">
-            Live Dispatch <Radio size={14} />
+    <>
+      <section>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h2 className={heading}>Status Pengemudi Aktif</h2>
+          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium ${blueBadge}`}>
+            Live Dispatch <Radio size={15} />
           </span>
         </div>
-        <div className="ndr-card-grid">
-          {visible.length ? (
-            visible.map((driver) => (
-              <DriverCard key={driver.id} driver={driver} />
-            ))
-          ) : (
-            <div className="ndr-empty">
-              Tidak ada driver yang sesuai dengan pencarian atau filter.
-            </div>
-          )}
+        <div className="grid items-start gap-3 @min-[650px]:grid-cols-2">
+          {visible.map(driver => <DriverCard key={driver.id} driver={driver} />)}
+          {visible.length === 0 && <p className={`${panel} col-span-full p-5 text-[12px] text-center text-slate-500`}>Tidak ada driver yang sesuai dengan pencarian atau filter.</p>}
         </div>
       </section>
-
-      <section className="ndr-section">
-        <div className="ndr-section-head">
-          <h2>Laporan Kinerja Minggu Ini</h2>
+      <section>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className={heading}>Jadwal Pendampingan Tamu Hari Ini</h2>
+          <span className="text-[11px] text-slate-500">2 Rute Berjalan</span>
         </div>
-        <div className="ndr-stats">
-          <article className="ndr-stat">
-            <div className="ndr-stat-title">
-              <span>JAM KEMUDI</span>
-              <Clock3 size={23} />
-            </div>
-            <p className="ndr-stat-number">
-              42 <small>Jam</small>
-            </p>
-            <p className="ndr-stat-caption green">
-              <TrendingUp size={19} />
-              <span>+14% beban stabil</span>
-            </p>
-          </article>
-          <article className="ndr-stat">
-            <div className="ndr-stat-title">
-              <span>KEPUASAN TAMU</span>
-              <Smile size={23} />
-            </div>
-            <p className="ndr-stat-number">
-              98% <small className="green">Puas</small>
-            </p>
-            <p className="ndr-stat-caption">Dari 64 ulasan tamu</p>
-          </article>
-        </div>
+        <ul className={`${panel} divide-y divide-slate-100`}>
+          <ScheduleRow initials="BS" name="Budi Santoso" route="Surabaya City Tour (House of Sampoerna • Tunjungan Plaza)" time="08:00 – 18:00">
+            Driver pendamping: <span className="text-slate-600">Hendra Wijaya</span>
+          </ScheduleRow>
+          <ScheduleRow initials="SM" name="Sarah Melinda" route="Penjemputan Bandara Juanda T2 → Hotel Majapahit" time="Standby 14:30" standby>
+            Konfirmasi penerbangan tepat waktu
+          </ScheduleRow>
+        </ul>
       </section>
-
-      <section className="ndr-section">
-        <div className="ndr-section-head">
-          <h2>Jadwal Pendampingan Tamu Hari Ini</h2>
-          <span className="ndr-subtle">2 Rute Berjalan</span>
-        </div>
-        <div className="ndr-schedules">
-          <div className="ndr-schedule">
-            <span className="ndr-schedule-avatar">BS</span>
-            <div className="ndr-schedule-main">
-              <strong>Budi Santoso</strong>
-              <p>Surabaya City Tour (House of Sampoerna • Tunjungan Plaza)</p>
-              <small>Driver pendamping: Hendra Wijaya</small>
-            </div>
-            <span className="ndr-time">08:00 – 18:00</span>
-          </div>
-          <div className="ndr-schedule">
-            <span className="ndr-schedule-avatar">SM</span>
-            <div className="ndr-schedule-main">
-              <strong>Sarah Melinda</strong>
-              <p>Penjemputan Bandara Juanda T2 → Hotel Majapahit</p>
-              <small>Konfirmasi penerbangan tepat waktu</small>
-            </div>
-            <span className="ndr-time standby">Standby 14:30</span>
-          </div>
-        </div>
-      </section>
-
-      <div className="ndr-bottom-buttons">
-        <button
-          type="button"
-          disabled
-          title="Form tambah sopir belum tersedia"
-          className="ndr-primary"
-        >
-          <UserRoundPlus size={18} /> + Tambah Sopir Baru
-        </button>
-        <button
-          type="button"
-          disabled
-          title="Fitur ekspor belum tersedia"
-          className="ndr-secondary"
-        >
-          <Download size={18} /> Unduh Laporan Operasional (PDF / XLSX)
-        </button>
-      </div>
-    </div>
+      <button type="button" disabled title="Fitur ekspor belum tersedia"
+        className={`${panel} flex min-h-[36px] w-full items-center justify-center gap-2 px-3 text-[11px] font-semibold text-slate-700 disabled:cursor-not-allowed`}>
+        <Download size={15} /> Unduh Laporan Operasional (PDF / XLSX)
+      </button>
+    </>
   );
 }
