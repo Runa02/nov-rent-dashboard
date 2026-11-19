@@ -24,10 +24,10 @@ const menu = [
   ["Ringkasan", LayoutDashboard, "/admin/dashboard"],
   ["Manajemen Armada", CarFront, "/admin/cars"],
   ["Manajemen Pesanan", ClipboardList, "/admin/orders"],
-  ["Aspirasi & Usulan Warga", MessageSquare, "/admin/aspirasi"],
+  // ["Aspirasi & Usulan Warga", MessageSquare, "/admin/aspirasi"],
   ["Manajemen Driver", Users, "/admin/drivers"],
-  ["Petugas & Disposisi", ClipboardCheck, "/admin/petugas"],
-  ["Laporan & Rekap Cetak", FileBarChart, "/admin/laporan"],
+  // ["Petugas & Disposisi", ClipboardCheck, "/admin/petugas"],
+  // ["Laporan & Rekap Cetak", FileBarChart, "/admin/laporan"],
 ];
 
 const masterDataMenu = [
@@ -92,7 +92,7 @@ export default function AdminSidebar({ open, setOpen }) {
           );
         })}
 
-        <div className="admin-config-label">KONFIGURASI SISTEM</div>
+        {/* <div className="admin-config-label">KONFIGURASI SISTEM</div>
         <div
           className={`admin-master-data ${masterDataMenu.some(([, , path]) => location.pathname === path || location.pathname.startsWith(`${path}/`)) ? "active" : ""}`}
         >
@@ -127,7 +127,7 @@ export default function AdminSidebar({ open, setOpen }) {
               })}
             </div>
           )}
-        </div>
+        </div> */}
       </nav>
 
       <div className="admin-sidebar-bottom">
