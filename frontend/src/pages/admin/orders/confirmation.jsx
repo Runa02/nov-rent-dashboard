@@ -9,6 +9,7 @@ import {
   ChevronDown,
   CircleAlert,
   ClipboardCheck,
+  Download,
   FileText,
   Image as ImageIcon,
   Upload,
@@ -17,6 +18,8 @@ import {
 import {
   collection,
   doc,
+  getDoc,
+  getDocs,
   onSnapshot,
   query,
   serverTimestamp,
@@ -28,6 +31,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { db } from "../../../config/firebase.js";
 import AdminSidebar from "../components/AdminSidebar.jsx";
 import AdminTopbar from "../components/AdminTopbar.jsx";
+import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import DatabaseLoading, {
   useMinimumLoading,
 } from "../components/DatabaseLoading.jsx";
@@ -201,6 +205,33 @@ function normalizeUserProfile(data, booking) {
   };
 }
 
+async function fetchUserProfile(orderData, booking) {
+  const nestedUser = orderData.user || orderData.customer || {};
+  const userId =
+    orderData.userId ||
+    orderData.uid ||
+    orderData.customerId ||
+    orderData.userUid ||
+    nestedUser.id ||
+    nestedUser.uid;
+
+  if (userId) {
+    const userSnapshot = await getDoc(doc(db, "users", String(userId)));
+    if (userSnapshot.exists()) return userSnapshot.data();
+  }
+
+  const email =
+    orderData.customerEmail ||
+    orderData.userEmail ||
+    nestedUser.email ||
+    booking.email;
+  if (!email || email === "-") return null;
+
+  const userQuery = query(collection(db, "users"), where("email", "==", email));
+  const userSnapshot = await getDocs(userQuery);
+  return userSnapshot.docs[0]?.data() || null;
+}
+
 function Card({ title, icon: Icon, children, action, hidden = false }) {
   const [open, setOpen] = useState(true);
 
@@ -240,10 +271,13 @@ export default function OrderConfirmationPage() {
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(true);
   const [paymentData, setPaymentData] = useState(null);
+  const [userRecord, setUserRecord] = useState(null);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [file, setFile] = useState(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [validationDialogOpen, setValidationDialogOpen] = useState(false);
+  const [validationMessage, setValidationMessage] = useState("");
   const [activeStep, setActiveStep] = useState(1);
   const showLoading = useMinimumLoading(loading || paymentLoading);
   const fileRef = useRef(null);
@@ -263,7 +297,14 @@ export default function OrderConfirmationPage() {
           setLoadError("Pesanan tidak ditemukan di Firestore.");
         } else {
           const data = snapshot.data();
-          setBooking(normalizeBooking(snapshot.id, data));
+          const normalizedBooking = normalizeBooking(snapshot.id, data);
+          setBooking(normalizedBooking);
+          fetchUserProfile(data, normalizedBooking)
+            .then(setUserRecord)
+            .catch((error) => {
+              console.error("Gagal memuat profil pengguna:", error);
+              setUserRecord(null);
+            });
           setLoadError("");
         }
         setLoading(false);
@@ -300,7 +341,17 @@ export default function OrderConfirmationPage() {
   }, [id]);
 
   const userProfile = booking
-    ? normalizeUserProfile(booking.raw, booking)
+    ? normalizeUserProfile(
+        {
+          ...booking.raw,
+          user: {
+            ...(booking.raw.user || {}),
+            ...(booking.raw.customer || {}),
+            ...(userRecord || {}),
+          },
+        },
+        booking,
+      )
     : null;
   const paymentAmount = Number(paymentData?.amount ?? booking?.total ?? 0);
   const invoiceAmount = Number(booking?.total || paymentAmount);
@@ -320,6 +371,18 @@ export default function OrderConfirmationPage() {
   )
     .replace(/[_-]+/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const availableDocuments = userProfile?.documents.filter(
+    (document) => document.url,
+  ).length;
+  const userIsVerified = [
+    "verified",
+    "terverifikasi",
+    "sudah diverifikasi",
+  ].includes(
+    String(userProfile?.verificationStatus || "")
+      .trim()
+      .toLowerCase(),
+  );
 
   const updateOrderStatus = async (updates) => {
     if (!id) return;
@@ -351,6 +414,25 @@ export default function OrderConfirmationPage() {
   };
 
   const confirmOrder = async () => {
+    const missingDocuments =
+      userProfile?.documents
+        .filter((document) => !document.url)
+        .map((document) => document.label) || [];
+
+    if (!userIsVerified || missingDocuments.length > 0) {
+      const reasons = [];
+      if (!userIsVerified) {
+        reasons.push("status pengguna belum terverifikasi");
+      }
+      if (missingDocuments.length > 0) {
+        reasons.push("dokumen belum tersedia: " + missingDocuments.join(", "));
+      }
+
+      setValidationMessage(reasons.join(" dan "));
+      setValidationDialogOpen(true);
+      return;
+    }
+
     const saved = await updateOrderStatus({
       paymentStatus: "Sudah Dibayar",
       statusPayment: "Sudah Dibayar",
@@ -428,22 +510,29 @@ export default function OrderConfirmationPage() {
           <div className="mx-auto grid grid-cols-1 gap-3">
             <div className={activeStep === 1 ? "contents" : "hidden"}>
               <Card title="Bukti Pembayaran Pelanggan" icon={ImageIcon}>
-                <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-                  {paymentProof && (
-                    <a
-                      href={paymentProof}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mb-3 block overflow-hidden rounded-lg border border-slate-200 bg-white"
-                    >
-                      <img
-                        src={paymentProof}
-                        alt="Bukti pembayaran pelanggan"
-                        className="max-h-[360px] w-full object-contain"
-                      />
-                    </a>
-                  )}
-                  <div className="mx-auto rounded-lg border border-slate-200 bg-white p-4">
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="flex min-h-[360px] items-center justify-center rounded-lg border border-slate-100 bg-slate-50 p-3">
+                    {paymentProof ? (
+                      <a
+                        href={paymentProof}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block max-h-[520px] w-full overflow-hidden rounded-lg border border-slate-200 bg-white"
+                      >
+                        <img
+                          src={paymentProof}
+                          alt="Bukti pembayaran pelanggan"
+                          className="max-h-[520px] w-full object-contain"
+                        />
+                      </a>
+                    ) : (
+                      <div className="text-center text-slate-400">
+                        <ImageIcon className="mx-auto mb-2" size={24} />
+                        Bukti pembayaran belum tersedia.
+                      </div>
+                    )}
+                  </div>
+                  <div className="rounded-lg text-sm border border-slate-200 bg-white p-4">
                     <div className="mb-3 flex items-center justify-between border-b pb-3">
                       <span className="font-bold text-blue-700">
                         {paymentBank}{" "}
@@ -481,139 +570,111 @@ export default function OrderConfirmationPage() {
                       <span>Jumlah Transfer</span>
                       <b className="text-blue-700">{rupiah(paymentAmount)}</b>
                     </div>
-                    <div className="mt-4 flex justify-around text-lg font-bold tracking-widest text-slate-500">
-                      ▌▌▌ ▌▌▌ ▌▌▌
-                    </div>
+                    <button className="mt-4 inline-flex w-full items-center justify-center gap-1 rounded-md border border-slate-200 bg-white py-2 font-semibold text-slate-600">
+                      <Download size={12} /> Unduh Berkas
+                    </button>
                   </div>
-                </div>
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  <div className="rounded bg-slate-50 p-2">
-                    <span className="block text-slate-400">Nama Bank</span>
-                    <b>{paymentBank}</b>
-                  </div>
-                  <div className="rounded bg-slate-50 p-2">
-                    <span className="block text-slate-400">Waktu Unggah</span>
-                    <b>{paymentDate}</b>
-                  </div>
-                  <div className="rounded bg-slate-50 p-2">
-                    <span className="block text-slate-400">
-                      Status Verifikasi
-                    </span>
-                    <b className="text-amber-600">{paymentStatus}</b>
-                  </div>
-                </div>
-                <div className="mt-3 flex gap-2">
-                  <button className="inline-flex flex-1 items-center justify-center gap-1 rounded-md border border-slate-200 bg-white py-2 font-semibold text-slate-600">
-                    <ImageIcon size={12} /> Lihat Gambar Penuh
-                  </button>
-                  <button className="inline-flex flex-1 items-center justify-center gap-1 rounded-md border border-slate-200 bg-white py-2 font-semibold text-slate-600">
-                    <FileText size={12} /> Unduh Berkas
-                  </button>
                 </div>
               </Card>
               <Card title="Informasi Verifikasi Transfer" icon={ClipboardCheck}>
-                <p className="mb-3 text-slate-400">
-                  Bandingkan data slip pelanggan dengan mutasi rekening masuk
-                  NOV Rent.
-                </p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-                    <span className="block text-slate-400">
-                      METODE PEMBAYARAN
-                    </span>
-                    <b className="mt-1 block text-indigo-700">
-                      {paymentMethod}
-                    </b>
-                  </div>
-                  <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-                    <span className="block text-slate-400">
-                      REKENING TUJUAN PERUSAHAAN
-                    </span>
-                    <b className="mt-1 block text-indigo-700">
-                      {paymentAccount}
-                    </b>
-                  </div>
-                  <div className="rounded-lg bg-slate-50 p-3">
-                    <span className="block text-slate-400">
-                      NOMINAL TAGIHAN RESMI
-                    </span>
-                    <b className="mt-1 block text-slate-800">
-                      {rupiah(invoiceAmount)}
-                    </b>
-                  </div>
-                  <div className="rounded-lg bg-emerald-50 p-3">
-                    <span className="block text-slate-400">
-                      NOMINAL TRANSFER PELANGGAN
-                    </span>
-                    <b className="mt-1 block text-emerald-700">
-                      {rupiah(paymentAmount)}{" "}
-                      <span className="ml-1 rounded bg-emerald-500 px-1 text-[7px] text-white">
-                        Cocok 100%
+                <div className="text-sm">
+                  <p className="mb-3 text-slate-400">
+                    Bandingkan data slip pelanggan dengan mutasi rekening masuk
+                    NOV Rent.
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                      <span className="block text-slate-400">
+                        METODE PEMBAYARAN
                       </span>
-                    </b>
+                      <b className="mt-1 block text-indigo-700">
+                        {paymentMethod}
+                      </b>
+                    </div>
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                      <span className="block text-slate-400">
+                        REKENING TUJUAN PERUSAHAAN
+                      </span>
+                      <b className="mt-1 block text-indigo-700">
+                        {paymentAccount}
+                      </b>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 p-3">
+                      <span className="block text-slate-400">
+                        NOMINAL TAGIHAN RESMI
+                      </span>
+                      <b className="mt-1 block text-slate-800">
+                        {rupiah(invoiceAmount)}
+                      </b>
+                    </div>
+                    <div className="rounded-lg bg-emerald-50 p-3">
+                      <span className="block text-slate-400">
+                        NOMINAL TRANSFER PELANGGAN
+                      </span>
+                      <b className="mt-1 block text-emerald-700">
+                        {rupiah(paymentAmount)}{" "}
+                        <span className="ml-1 rounded bg-emerald-500 px-1 text-[7px] text-white">
+                          Cocok 100%
+                        </span>
+                      </b>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <div>
-                    <span className="block text-slate-400">
-                      NAMA REKENING PENGIRIM
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <div>
+                      <span className="block text-slate-400">
+                        NAMA REKENING PENGIRIM
+                      </span>
+                      <b>{paymentSender}</b>
+                    </div>
+                    <div>
+                      <span className="block text-slate-400">
+                        TANGGAL / WAKTU TRANSFER
+                      </span>
+                      <b>{paymentDate}</b>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex gap-2 rounded-lg bg-amber-50 p-3 text-amber-800">
+                    <CircleAlert size={14} className="shrink-0" />
+                    <span>
+                      <b>Perhatian Prosedur Admin:</b>
+                      <br />
+                      Pastikan nominal pembayaran dan nomor rekening tujuan
+                      sesuai dengan invoice.
                     </span>
-                    <b>{paymentSender}</b>
                   </div>
-                  <div>
-                    <span className="block text-slate-400">
-                      TANGGAL / WAKTU TRANSFER
-                    </span>
-                    <b>{paymentDate}</b>
-                  </div>
-                </div>
-                <div className="mt-4 flex gap-2 rounded-lg bg-amber-50 p-3 text-amber-800">
-                  <CircleAlert size={14} className="shrink-0" />
-                  <span>
-                    <b>Perhatian Prosedur Admin:</b>
-                    <br />
-                    Pastikan nominal pembayaran dan nomor rekening tujuan sesuai
-                    dengan invoice. Selalu lakukan validasi silang pada mutasi
-                    rekening korban atas status webhook ICA Virtual account
-                    sebelum mengonfirmasi pesanan.
-                  </span>
                 </div>
               </Card>
               <Card title="Detail Kendaraan Sewa" icon={CarFront}>
-                <div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
-                  <span className="grid h-14 w-20 place-items-center rounded bg-gradient-to-br from-slate-200 to-slate-400 text-slate-600">
-                    <CarFront size={28} />
-                  </span>
-                  <div>
-                    <b className="block">{booking.car}</b>
-                    <span className="block text-slate-400">
-                      {booking.plate} · Tahun {booking.vehicleYear}
+                <div className="text-sm">
+                  <div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+                    <span className="grid h-14 w-20 place-items-center rounded bg-gradient-to-br from-slate-200 to-slate-400 text-slate-600">
+                      <CarFront size={28} />
                     </span>
-                    <span className="mt-1 inline-block rounded bg-indigo-600 px-2 py-1 font-bold text-white">
-                      {booking.service}
-                    </span>
+                    <div>
+                      <b className="block">{booking.car}</b>
+                      <span className="block text-slate-400">
+                        {booking.plate} · Tahun {booking.vehicleYear}
+                      </span>
+                      <span className="mt-1 inline-block rounded bg-indigo-600 px-2 py-1 font-bold text-white">
+                        {booking.service}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <div>
-                    <span className="block text-slate-400">
-                      Layanan / Lokasi
-                    </span>
-                    <b>{booking.serviceNote}</b>
-                  </div>
-                  <div>
-                    <span className="block text-slate-400">Periode Sewa</span>
-                    <b>{booking.period}</b>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="block text-slate-400">
+                        Layanan / Lokasi
+                      </span>
+                      <b>{booking.serviceNote}</b>
+                    </div>
+                    <div>
+                      <span className="block text-slate-400">Periode Sewa</span>
+                      <b>{booking.period}</b>
+                    </div>
                   </div>
                 </div>
               </Card>
               <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => navigate("/admin/orders")}
-                  className="inline-flex items-center gap-2 rounded-md bg-red-700 px-4 py-2.5 text-[11px] font-bold text-white hover:bg-red-800"
-                >
-                  <ArrowLeft size={14} /> Kembali
-                </button>
                 <button
                   type="button"
                   onClick={() => setActiveStep(2)}
@@ -625,7 +686,7 @@ export default function OrderConfirmationPage() {
             </div>
             <div className={activeStep === 2 ? "contents" : "hidden"}>
               <Card title="Rincian Pembayaran" icon={FileText}>
-                <div className="space-y-2">
+                <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Sewa Kendaraan</span>
                     <b>{rupiah(booking.baseAmount)}</b>
@@ -649,81 +710,93 @@ export default function OrderConfirmationPage() {
                 </div>
               </Card>
               <Card title="Data Pengguna" icon={BadgeCheck}>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {[
-                    ["Nama", userProfile.name],
-                    ["Email", userProfile.email],
-                    ["Nomor Telepon", userProfile.phone],
-                    ["Role", userProfile.role],
-                    ["Status Verifikasi", userProfile.verificationStatus],
-                    ["Alasan Penolakan", userProfile.rejectionReason || "-"],
-                    ["Dibuat Pada", userProfile.createdAt],
-                    [
-                      "Diajukan Verifikasi",
-                      userProfile.verificationSubmittedAt,
-                    ],
-                  ].map(([label, value]) => (
-                    <div key={label} className="rounded-lg bg-slate-50 p-2.5">
-                      <span className="block uppercase tracking-wide text-slate-400">
-                        {label}
-                      </span>
-                      <b className="mt-1 block break-words text-slate-700">
-                        {value}
-                      </b>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <b className="text-emerald-800">
-                      Dokumen Verifikasi Pengguna
+                <div className="mb-3 flex text-sm items-center gap-3 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-slate-50 p-3">
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-indigo-600 text-sm font-extrabold text-white shadow-sm">
+                    {initials(userProfile.name)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <b className="block truncate text-[13px] text-slate-800">
+                      {userProfile.name}
                     </b>
-                    <span className="font-semibold text-emerald-700">
-                      3 dokumen tersedia
+                    <span className="block truncate text-slate-500">
+                      {userProfile.email} • {userProfile.phone}
                     </span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${userIsVerified ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}
+                  >
+                    {userProfile.verificationStatus}
+                  </span>
+                </div>
+                <div className="mt-3 rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-3">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <div>
+                      <b className="block text-emerald-900">
+                        Dokumen Verifikasi Pengguna
+                      </b>
+                      <span className="text-[10px] text-emerald-700/70">
+                        Dokumen identitas yang diunggah pelanggan
+                      </span>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-700">
+                      {availableDocuments} / {userProfile.documents.length}{" "}
+                      tersedia
+                    </span>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
                     {userProfile.documents.map((document) => (
                       <div
                         key={document.field}
-                        className="rounded-md border border-slate-100 bg-white p-2 text-center"
+                        className={`rounded-xl border p-3 text-center ${document.url ? "border-emerald-100 bg-white" : "border-slate-100 bg-slate-50/70"}`}
                       >
                         <FileText
                           size={16}
-                          className="mx-auto mb-1 text-emerald-600"
+                          className={`mx-auto mb-2 ${document.url ? "text-emerald-600" : "text-slate-400"}`}
                         />
                         <b className="block text-slate-700">{document.label}</b>
-                        <span className="text-emerald-600">
+                        <span
+                          className={`mt-1 block ${document.url ? "text-emerald-600" : "text-slate-400"}`}
+                        >
                           {document.status}
                         </span>
+                        {document.url && (
+                          <a
+                            href={document.url}
+                            download={`${document.label.toLowerCase()}-${userProfile.name.replace(/\\s+/g, "-")}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mx-auto mt-3 inline-flex w-full max-w-[132px] items-center justify-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[10px] font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
+                          >
+                            <Download size={12} /> Download
+                          </a>
+                        )}
                       </div>
                     ))}
                   </div>
                 </div>
               </Card>
-              <Card title="Aksi Verifikasi Pembayaran" icon={BadgeCheck}>
-                <p className="mb-3 text-slate-400">
-                  Pastikan bukti transfer telah diperiksa dengan teliti sebelum
-                  memberikan keputusan kepada pelanggan.
-                </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => navigate("/admin/orders")}
+                  className="mb-2 flex items-center justify-center gap-1 rounded-md bg-gray-600 py-2.5 px-2.5 font-bold text-white hover:bg-gray-700 disabled:bg-gray-300"
+                >
+                  <ArrowLeft size={14} /> Kembali
+                </button>
+                <button
+                  onClick={() => setRejectOpen(true)}
+                  className="mb-2 flex items-center justify-center gap-1 rounded-md bg-red-600 py-2.5 px-2.5 font-bold text-white hover:bg-red-700 disabled:bg-red-300"
+                >
+                  <X size={13} /> Tolak Bukti Transfer
+                </button>
                 <button
                   onClick={confirmOrder}
                   disabled={confirmed}
-                  className="mb-2 flex w-full items-center justify-center gap-1 rounded-md bg-emerald-600 py-2.5 font-bold text-white hover:bg-emerald-700 disabled:bg-emerald-300"
+                  className="mb-2 flex items-center justify-center gap-1 rounded-md bg-emerald-600 py-2.5 px-2.5 font-bold text-white hover:bg-emerald-700 disabled:bg-emerald-300"
                 >
                   <CheckCircle2 size={13} />{" "}
                   {confirmed ? "Pesanan Dikonfirmasi" : "Konfirmasi Pesanan"}
                 </button>
-                <button
-                  onClick={() => setRejectOpen(true)}
-                  className="flex w-full items-center justify-center gap-1 rounded-md border border-red-100 bg-red-50 py-2.5 font-bold text-red-600 hover:bg-red-100"
-                >
-                  <X size={13} /> Tolak Bukti Transfer
-                </button>
-                <p className="mt-3 text-center text-slate-400">
-                  Aktivitas verifikasi tercatat dalam audit log oleh Admin.
-                </p>
-              </Card>
+              </div>
             </div>
           </div>
           {rejectOpen && (
@@ -761,31 +834,6 @@ export default function OrderConfirmationPage() {
                     className="mt-2 w-full resize-none rounded-lg border border-slate-200 p-3 font-normal outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </label>
-                <div className="mt-3">
-                  <span className="block font-bold text-slate-700">
-                    Lampiran pendukung{" "}
-                    <span className="font-normal text-slate-400">
-                      (opsional)
-                    </span>
-                  </span>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(event) =>
-                      setFile(event.target.files?.[0] || null)
-                    }
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 p-4 text-slate-500 hover:border-blue-400 hover:bg-blue-50"
-                  >
-                    <Upload size={15} />{" "}
-                    {file ? file.name : "Upload gambar atau PDF"}
-                  </button>
-                </div>
                 <div className="mt-5 flex justify-end gap-2">
                   <button
                     type="button"
@@ -804,6 +852,19 @@ export default function OrderConfirmationPage() {
               </form>
             </div>
           )}
+          <ConfirmDialog
+            open={validationDialogOpen}
+            title="Data pengguna belum lengkap"
+            message={
+              "Konfirmasi pesanan tidak dapat dilanjutkan karena " +
+              validationMessage +
+              "."
+            }
+            confirmLabel="Mengerti"
+            cancelLabel="Tutup"
+            onConfirm={() => setValidationDialogOpen(false)}
+            onCancel={() => setValidationDialogOpen(false)}
+          />
         </main>
       </div>
     </div>
